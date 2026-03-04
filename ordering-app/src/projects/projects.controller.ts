@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Delete, Param, Body } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
+import { ParseUUIDPipe } from '../common/pipes/parse-uuid.pipe';
 
 @Controller('projects')
 export class ProjectsController {
@@ -11,22 +12,22 @@ export class ProjectsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.projectsService.findOne(id);
   }
 
   @Post(':id/items')
-  addItem(@Param('id') id: string, @Body() dto: { product_id: string }) {
+  addItem(@Param('id', ParseUUIDPipe) id: string, @Body() dto: { product_id: string }) {
     return this.projectsService.addItem(id, dto.product_id);
   }
 
   @Delete(':id/items/:productId')
-  removeItem(@Param('id') id: string, @Param('productId') productId: string) {
+  removeItem(@Param('id', ParseUUIDPipe) id: string, @Param('productId') productId: string) {
     return this.projectsService.removeItem(id, productId);
   }
 
   @Post(':id/submit')
-  submit(@Param('id') id: string) {
+  submit(@Param('id', ParseUUIDPipe) id: string) {
     return this.projectsService.submit(id);
   }
 }
