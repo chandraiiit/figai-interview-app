@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from 'src/entities/product.entity';
 import { Repository } from 'typeorm';
@@ -142,6 +142,37 @@ export class ProductsService {
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
   ) {}
+
+  async findAll(query: { category?: string; cert?: string; supplier?: string; q?: string }): Promise<Product[]> {
+  const qb = this.productRepo.createQueryBuilder('product');
+
+  if (query.category) {
+    qb.andWhere('LOWER(product.category) = LOWER(:category)', { category: query.category });
+  }
+
+  if (query.supplier) {
+    qb.andWhere('LOWER(product.supplier) = LOWER(:supplier)', { supplier: query.supplier });
+  }
+
+  if (query.cert) {
+    qb.andWhere(':cert = ANY(product.certifications)', { cert: query.cert });
+  }
+
+  if (query.q) {
+    qb.andWhere(
+      'LOWER(product.listing) LIKE LOWER(:q) OR LOWER(product.notes) LIKE LOWER(:q) OR LOWER(product.suggested_use) LIKE LOWER(:q)',
+      { q: `%${query.q}%` },
+    );
+  }
+
+  return qb.getMany();
+}
+
+async findOne(item_id: string): Promise<Product> {
+  const product = await this.productRepo.findOneBy({ item_id });
+  if (!product) throw new NotFoundException(`Product ${item_id} not found`);
+  return product;
+}
 
   private parseSupplier(listing: string): string {
     const match = listing.match(/—\s*(.+)$/);
