@@ -22,6 +22,7 @@ docker compose up -d
 
 ### 2. Install dependencies
 ```bash
+cd ordering-app
 npm install
 ```
 
