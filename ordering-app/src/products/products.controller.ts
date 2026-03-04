@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Post } from '@nestjs/common';
+import { Controller, Get, Param, Query, Post, BadRequestException } from '@nestjs/common';
 import { ProductsService } from './products.service';
 
 @Controller('products')
@@ -19,4 +19,10 @@ export class ProductsController {
   findOne(@Param('id') id: string) {
     return this.productsService.findOne(id);
   }
+
+  @Get('search/llm')
+searchWithLLM(@Query('q') q: string) {
+  if (!q) throw new BadRequestException('Query parameter q is required');
+  return this.productsService.searchWithLLM(q);
+}
 }

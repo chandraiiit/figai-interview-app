@@ -1,7 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { firstValueFrom } from 'rxjs';
 import { Product } from 'src/entities/product.entity';
 import { Repository } from 'typeorm';
+import { HttpService } from '@nestjs/axios';
 
 const PRODUCTS_DATA = [
   {
@@ -141,7 +144,50 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
+        private readonly configService: ConfigService,
+          private readonly httpService: HttpService,
+
+
   ) {}
+
+  async searchWithLLM(query: string): Promise<Product[]> {
+  try {
+    const allProducts = await this.productRepo.find();
+
+    const catalog = allProducts.map((p) => ({
+      item_id: p.item_id,
+      listing: p.listing,
+      category: p.category,
+      supplier: p.supplier,
+      certifications: p.certifications,
+      suggested_use: p.suggested_use,
+      notes: p.notes,
+      details: p.details,
+    }));
+
+    const llmUrl = 'http://localhost:8000';
+
+    const response = await firstValueFrom(
+      this.httpService.post(`${llmUrl}/search`, {
+        query,
+        products: catalog,
+      }),
+    );
+
+    const matchedIds: string[] = response.data.matched_ids;
+
+    if (!matchedIds || matchedIds.length === 0) return [];
+
+    const products = await Promise.all(
+      matchedIds.map((id) => this.productRepo.findOneBy({ item_id: id })),
+    );
+
+    return products.filter((p): p is Product => p !== null);
+  } catch (error) {
+    // fallback to regular keyword search
+    return this.findAll({ q: query });
+  }
+}
 
   async findAll(query: { category?: string; cert?: string; supplier?: string; q?: string }): Promise<Product[]> {
   const qb = this.productRepo.createQueryBuilder('product');
